@@ -29,7 +29,7 @@ public class EmailJobAlarm implements JobAlarm {
 
     /**
      * fail alarm
-     *
+     * 执行失败报警
      * @param jobLog
      */
     @Override

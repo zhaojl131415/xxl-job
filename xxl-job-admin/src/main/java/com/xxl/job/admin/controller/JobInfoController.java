@@ -136,16 +136,23 @@ public class JobInfoController {
 	public ReturnT<String> start(int id) {
 		return xxlJobService.start(id);
 	}
-	
+
+	/**
+	 * 服务端 主动触发
+	 * @param id
+	 * @param executorParam
+	 * @param addressList
+	 * @return
+	 */
 	@RequestMapping("/trigger")
 	@ResponseBody
 	//@PermissionLimit(limit = false)
 	public ReturnT<String> triggerJob(int id, String executorParam, String addressList) {
-		// force cover job param
+		// force cover job param 设置默认值
 		if (executorParam == null) {
 			executorParam = "";
 		}
-
+		// 执行触发器: 触发器类型，手动 ，重试次数，'执行器任务分片参数，格式如 1/2'，任务参数，机器地址
 		JobTriggerPoolHelper.trigger(id, TriggerTypeEnum.MANUAL, -1, null, executorParam, addressList);
 		return ReturnT.SUCCESS;
 	}

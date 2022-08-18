@@ -10,6 +10,7 @@ import com.xxl.job.core.biz.model.TriggerParam;
 import java.util.List;
 
 /**
+ * 故障转移: 按照顺序依次进行心跳检测，第一个心跳检测成功的机器选定为目标执行器并发起调度；
  * Created by xuxueli on 17/3/10.
  */
 public class ExecutorRouteFailover extends ExecutorRouter {
@@ -18,13 +19,17 @@ public class ExecutorRouteFailover extends ExecutorRouter {
     public ReturnT<String> route(TriggerParam triggerParam, List<String> addressList) {
 
         StringBuffer beatResultSB = new StringBuffer();
+        // 遍历配置的每个地址
         for (String address : addressList) {
             // beat
             ReturnT<String> beatResult = null;
             try {
+                // 获取executor-client
                 ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(address);
+                // 检测心跳
                 beatResult = executorBiz.beat();
             } catch (Exception e) {
+                // 检测异常直接封装返回
                 logger.error(e.getMessage(), e);
                 beatResult = new ReturnT<String>(ReturnT.FAIL_CODE, ""+e );
             }
@@ -36,7 +41,7 @@ public class ExecutorRouteFailover extends ExecutorRouter {
 
             // beat success
             if (beatResult.getCode() == ReturnT.SUCCESS_CODE) {
-
+                // 设置访问client请求结果,以及地址返回
                 beatResult.setMsg(beatResultSB.toString());
                 beatResult.setContent(address);
                 return beatResult;

@@ -41,17 +41,27 @@ public class XxlJobConfig {
     private int logRetentionDays;
 
 
+    /**
+     * 将 XxlJobSpringExecutor 交由容器托管
+     * @return
+     */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {
         logger.info(">>>>>>>>>>> xxl-job config init.");
         XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
+        // xxl-job管理地址
         xxlJobSpringExecutor.setAdminAddresses(adminAddresses);
+        // 注册应用名称
         xxlJobSpringExecutor.setAppname(appname);
+        // xxl作业执行器注册表地址
         xxlJobSpringExecutor.setAddress(address);
         xxlJobSpringExecutor.setIp(ip);
         xxlJobSpringExecutor.setPort(port);
+        // 注册地址的token
         xxlJobSpringExecutor.setAccessToken(accessToken);
+        // 日志路径
         xxlJobSpringExecutor.setLogPath(logPath);
+        // 日志保存天数
         xxlJobSpringExecutor.setLogRetentionDays(logRetentionDays);
 
         return xxlJobSpringExecutor;

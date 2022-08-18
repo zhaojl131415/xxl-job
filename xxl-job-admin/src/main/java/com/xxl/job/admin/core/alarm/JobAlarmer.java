@@ -19,6 +19,7 @@ public class JobAlarmer implements ApplicationContextAware, InitializingBean {
     private static Logger logger = LoggerFactory.getLogger(JobAlarmer.class);
 
     private ApplicationContext applicationContext;
+    // 这里jobAlarmList集合里面有很多JobAlarm对象， 都是执行初始化方法从spring注入的，也就是说扩展的话，只需要实现JobAlarm接口，注入spring即可。
     private List<JobAlarm> jobAlarmList;
 
     @Override
@@ -26,6 +27,10 @@ public class JobAlarmer implements ApplicationContextAware, InitializingBean {
         this.applicationContext = applicationContext;
     }
 
+    /**
+     * spring 初始化后执行, 获取所有实现了JobAlarm接口的Bean, 加入到集合中
+     * @throws Exception
+     */
     @Override
     public void afterPropertiesSet() throws Exception {
         Map<String, JobAlarm> serviceBeanMap = applicationContext.getBeansOfType(JobAlarm.class);
@@ -44,11 +49,15 @@ public class JobAlarmer implements ApplicationContextAware, InitializingBean {
     public boolean alarm(XxlJobInfo info, XxlJobLog jobLog) {
 
         boolean result = false;
+        /**
+         * jobAlarmList: spring 容器中所有实现了{@link JobAlarm}接口的Bean
+         */
         if (jobAlarmList!=null && jobAlarmList.size()>0) {
             result = true;  // success means all-success
             for (JobAlarm alarm: jobAlarmList) {
                 boolean resultItem = false;
                 try {
+                    // 遍历执行失败告警
                     resultItem = alarm.doAlarm(info, jobLog);
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);

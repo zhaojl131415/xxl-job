@@ -2,6 +2,7 @@ package com.xxl.job.admin.controller;
 
 import com.xxl.job.admin.controller.annotation.PermissionLimit;
 import com.xxl.job.admin.core.conf.XxlJobAdminConfig;
+import com.xxl.job.admin.service.impl.AdminBizImpl;
 import com.xxl.job.core.biz.AdminBiz;
 import com.xxl.job.core.biz.model.HandleCallbackParam;
 import com.xxl.job.core.biz.model.RegistryParam;
@@ -55,9 +56,14 @@ public class JobApiController {
 
         // services mapping
         if ("callback".equals(uri)) {
+            // 客户端触发器执行回调
             List<HandleCallbackParam> callbackParamList = GsonTool.fromJson(data, List.class, HandleCallbackParam.class);
+            /**
+             * @see AdminBizImpl#callback(java.util.List)
+             */
             return adminBiz.callback(callbackParamList);
         } else if ("registry".equals(uri)) {
+            // 注册服务
             RegistryParam registryParam = GsonTool.fromJson(data, RegistryParam.class);
             return adminBiz.registry(registryParam);
         } else if ("registryRemove".equals(uri)) {

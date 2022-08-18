@@ -19,6 +19,10 @@ import java.util.Map;
 
 
 /**
+ *
+ * 1.发现注入了 ApplicationContext 对象。
+ * 2.实现了 SmartInitializingSingleton 接口，实现该接口的当spring容器初始完成，紧接着执行监听器发送监听后，就会遍历所有的Bean然后初始化所有单例非懒加载的bean，最后在实例化阶段结束时触发回调接口。
+ *
  * xxl-job executor (for spring)
  *
  * @author xuxueli 2018-11-01 09:24:52
@@ -35,13 +39,15 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
         /*initJobHandlerRepository(applicationContext);*/
 
         // init JobHandler Repository (for method)
+        // 初始化调度器资源管理器
         initJobHandlerMethodRepository(applicationContext);
 
-        // refresh GlueFactory
+        // refresh GlueFactory 刷新GlueFactory
         GlueFactory.refreshInstance(1);
 
         // super start
         try {
+            // 核心方法
             super.start();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -77,17 +83,25 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
         }
     }*/
 
+    /**
+     * 初始化调度器资源管理器
+     * 1.从spring容器获取所有对象，并遍历查找方法上标记XxlJob注解的方法
+     * 2.将xxljob配置的jobname作为key，对象,反射的执行,初始,销毁方法作为value注册jobHandlerRepository 中
+     * @param applicationContext
+     */
     private void initJobHandlerMethodRepository(ApplicationContext applicationContext) {
         if (applicationContext == null) {
             return;
         }
         // init job handler from method
         String[] beanDefinitionNames = applicationContext.getBeanNamesForType(Object.class, false, true);
+        // 遍历spring容器对象
         for (String beanDefinitionName : beanDefinitionNames) {
             Object bean = applicationContext.getBean(beanDefinitionName);
 
             Map<Method, XxlJob> annotatedMethods = null;   // referred to ：org.springframework.context.event.EventListenerMethodProcessor.processBean
             try {
+                /** 获取所有{@link XxlJob}注解的方法 */
                 annotatedMethods = MethodIntrospector.selectMethods(bean.getClass(),
                         new MethodIntrospector.MetadataLookup<XxlJob>() {
                             @Override
@@ -101,7 +115,7 @@ public class XxlJobSpringExecutor extends XxlJobExecutor implements ApplicationC
             if (annotatedMethods==null || annotatedMethods.isEmpty()) {
                 continue;
             }
-
+            /** 遍历所有{@link XxlJob}注解的方法 */
             for (Map.Entry<Method, XxlJob> methodXxlJobEntry : annotatedMethods.entrySet()) {
                 Method executeMethod = methodXxlJobEntry.getKey();
                 XxlJob xxlJob = methodXxlJobEntry.getValue();

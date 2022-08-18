@@ -20,12 +20,21 @@ public class XxlJobScheduler  {
     private static final Logger logger = LoggerFactory.getLogger(XxlJobScheduler.class);
 
 
+    /**
+     * 该方法主要做了如下事情：
+     * 1.init i18n
+     * 2.初始化触发器线程池
+     * 3.维护注册表信息(30秒执行一次)
+     * 4.将丢失主机信息调度日志更改状态
+     * 5.统计一些失败成功报表,删除过期日志
+     * 6.执行调度器
+     */
     public void init() throws Exception {
         // init i18n
         initI18n();
 
         // admin trigger pool start
-        //初始化触发器线程池
+        //初始化 触发器线程池
         JobTriggerPoolHelper.toStart();
 
         // admin registry monitor run
@@ -37,12 +46,15 @@ public class XxlJobScheduler  {
         JobFailMonitorHelper.getInstance().start();
 
         // admin lose-monitor run ( depend on JobTriggerPoolHelper )
+        // 将丢失主机信息调度日志更改状态
         JobCompleteHelper.getInstance().start();
 
         // admin log report start
+        // 统计一些失败成功报表
         JobLogReportHelper.getInstance().start();
 
         // start-schedule  ( depend on JobTriggerPoolHelper )
+        // 执行调度器
         JobScheduleHelper.getInstance().start();
 
         logger.info(">>>>>>>>> init xxl-job admin success.");
@@ -88,13 +100,14 @@ public class XxlJobScheduler  {
         }
 
         // load-cache
+        // 从缓存中通过地址获取ExecutorBiz
         address = address.trim();
         ExecutorBiz executorBiz = executorBizRepository.get(address);
         if (executorBiz != null) {
             return executorBiz;
         }
 
-        // set-cache
+        // set-cache 找不到就新建
         executorBiz = new ExecutorBizClient(address, XxlJobAdminConfig.getAdminConfig().getAccessToken());
 
         executorBizRepository.put(address, executorBiz);

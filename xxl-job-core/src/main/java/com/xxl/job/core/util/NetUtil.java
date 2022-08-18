@@ -16,6 +16,7 @@ public class NetUtil {
 
     /**
      * find avaliable port
+     * 寻找可用端口
      *
      * @param defaultPort
      * @return
@@ -23,6 +24,7 @@ public class NetUtil {
     public static int findAvailablePort(int defaultPort) {
         int portTmp = defaultPort;
         while (portTmp < 65535) {
+            // 未占用直接返回, 占用递增判断是否占用
             if (!isPortUsed(portTmp)) {
                 return portTmp;
             } else {
@@ -31,6 +33,7 @@ public class NetUtil {
         }
         portTmp = defaultPort--;
         while (portTmp > 0) {
+            // 未占用直接返回, 占用递减判断是否占用
             if (!isPortUsed(portTmp)) {
                 return portTmp;
             } else {

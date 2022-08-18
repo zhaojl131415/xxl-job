@@ -30,19 +30,24 @@ public class XxlJobFileAppender {
 	 */
 	private static String logBasePath = "/data/applogs/xxl-job/jobhandler";
 	private static String glueSrcPath = logBasePath.concat("/gluesource");
+
+	/**
+	 * 初始化日志文件
+	 * @param logPath
+	 */
 	public static void initLogPath(String logPath){
 		// init
 		if (logPath!=null && logPath.trim().length()>0) {
 			logBasePath = logPath;
 		}
-		// mk base dir
+		// mk base dir 日志文件不存在则创建
 		File logPathDir = new File(logBasePath);
 		if (!logPathDir.exists()) {
 			logPathDir.mkdirs();
 		}
 		logBasePath = logPathDir.getPath();
 
-		// mk glue dir
+		// mk glue dir 创建glue目录
 		File glueBaseDir = new File(logPathDir, "gluesource");
 		if (!glueBaseDir.exists()) {
 			glueBaseDir.mkdirs();

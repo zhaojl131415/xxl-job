@@ -33,12 +33,20 @@ public class EmbedServer {
     private ExecutorBiz executorBiz;
     private Thread thread;
 
+    /**
+     * 启动嵌入服务器 ,向服务端注册,以及监听端口,主要服务服务端调用。
+     * @param address
+     * @param port
+     * @param appname
+     * @param accessToken
+     */
     public void start(final String address, final int port, final String appname, final String accessToken) {
         executorBiz = new ExecutorBizImpl();
         thread = new Thread(new Runnable() {
             @Override
             public void run() {
                 // param
+                // 初始化Netty
                 EventLoopGroup bossGroup = new NioEventLoopGroup();
                 EventLoopGroup workerGroup = new NioEventLoopGroup();
                 ThreadPoolExecutor bizThreadPool = new ThreadPoolExecutor(
@@ -60,7 +68,7 @@ public class EmbedServer {
                             }
                         });
                 try {
-                    // start server
+                    // start server 启动Netty服务
                     ServerBootstrap bootstrap = new ServerBootstrap();
                     bootstrap.group(bossGroup, workerGroup)
                             .channel(NioServerSocketChannel.class)
@@ -71,17 +79,20 @@ public class EmbedServer {
                                             .addLast(new IdleStateHandler(0, 0, 30 * 3, TimeUnit.SECONDS))  // beat 3N, close if idle
                                             .addLast(new HttpServerCodec())
                                             .addLast(new HttpObjectAggregator(5 * 1024 * 1024))  // merge request & reponse to FULL
+                                            /**
+                                             * @see EmbedHttpServerHandler#channelRead0(io.netty.channel.ChannelHandlerContext, io.netty.handler.codec.http.FullHttpRequest)
+                                             */
                                             .addLast(new EmbedHttpServerHandler(executorBiz, accessToken, bizThreadPool));
                                 }
                             })
                             .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-                    // bind
+                    // bind  异步绑定port上
                     ChannelFuture future = bootstrap.bind(port).sync();
 
                     logger.info(">>>>>>>>>>> xxl-job remoting server start success, nettype = {}, port = {}", EmbedServer.class, port);
 
-                    // start registry
+                    // start registry 注册
                     startRegistry(appname, address);
 
                     // wait util stop
@@ -144,9 +155,13 @@ public class EmbedServer {
         protected void channelRead0(final ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
             // request parse
             //final byte[] requestBytes = ByteBufUtil.getBytes(msg.content());    // byteBuf.toString(io.netty.util.CharsetUtil.UTF_8);
+            // 解析请求数据
             String requestData = msg.content().toString(CharsetUtil.UTF_8);
+            // 获取uri,后面通过uri来处理不同的请求
             String uri = msg.uri();
+            // 获取请求方式,Post/Get
             HttpMethod httpMethod = msg.method();
+            // 保持长连接
             boolean keepAlive = HttpUtil.isKeepAlive(msg);
             String accessTokenReq = msg.headers().get(XxlJobRemotingUtil.XXL_JOB_ACCESS_TOKEN);
 
@@ -154,10 +169,10 @@ public class EmbedServer {
             bizThreadPool.execute(new Runnable() {
                 @Override
                 public void run() {
-                    // do invoke
+                    // do invoke 执行触发器
                     Object responseObj = process(httpMethod, uri, requestData, accessTokenReq);
 
-                    // to json
+                    // to json 响应结果转json
                     String responseJson = GsonTool.toJson(responseObj);
 
                     // write response
@@ -166,14 +181,24 @@ public class EmbedServer {
             });
         }
 
+        /**
+         * 执行触发器
+         * @param httpMethod
+         * @param uri
+         * @param requestData
+         * @param accessTokenReq
+         * @return
+         */
         private Object process(HttpMethod httpMethod, String uri, String requestData, String accessTokenReq) {
-            // valid
+            // valid 不是POST直接返回异常
             if (HttpMethod.POST != httpMethod) {
                 return new ReturnT<String>(ReturnT.FAIL_CODE, "invalid request, HttpMethod not support.");
             }
+            // 校验uri
             if (uri == null || uri.trim().length() == 0) {
                 return new ReturnT<String>(ReturnT.FAIL_CODE, "invalid request, uri-mapping empty.");
             }
+            // 校验token是否正确
             if (accessToken != null
                     && accessToken.trim().length() > 0
                     && !accessToken.equals(accessTokenReq)) {
@@ -189,7 +214,12 @@ public class EmbedServer {
                         IdleBeatParam idleBeatParam = GsonTool.fromJson(requestData, IdleBeatParam.class);
                         return executorBiz.idleBeat(idleBeatParam);
                     case "/run":
+                        // 请求参数解析成TriggerParam
                         TriggerParam triggerParam = GsonTool.fromJson(requestData, TriggerParam.class);
+                        /**
+                         * 执行触发器
+                         * @see ExecutorBizImpl#run(com.xxl.job.core.biz.model.TriggerParam)
+                         */
                         return executorBiz.run(triggerParam);
                     case "/kill":
                         KillParam killParam = GsonTool.fromJson(requestData, KillParam.class);
@@ -243,7 +273,11 @@ public class EmbedServer {
     }
 
     // ---------------------- registry ----------------------
-
+    /**
+     * 向服务端注册,默认30秒执行一次
+     * @param appname
+     * @param address
+     */
     public void startRegistry(final String appname, final String address) {
         // start registry
         ExecutorRegistryThread.getInstance().start(appname, address);

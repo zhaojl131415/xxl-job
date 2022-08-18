@@ -1,6 +1,7 @@
 package com.xxl.job.core.thread;
 
 import com.xxl.job.core.biz.AdminBiz;
+import com.xxl.job.core.biz.client.AdminBizClient;
 import com.xxl.job.core.biz.model.RegistryParam;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.enums.RegistryConfig;
@@ -23,18 +24,25 @@ public class ExecutorRegistryThread {
 
     private Thread registryThread;
     private volatile boolean toStop = false;
+
+    /**
+     * 向服务端注册,默认30秒执行一次
+     * @param appname
+     * @param address
+     */
     public void start(final String appname, final String address){
 
-        // valid
+        // valid appname不允许为null
         if (appname==null || appname.trim().length()==0) {
             logger.warn(">>>>>>>>>>> xxl-job, executor registry config fail, appname is null.");
             return;
         }
+        // 服务端地址不能为null
         if (XxlJobExecutor.getAdminBizList() == null) {
             logger.warn(">>>>>>>>>>> xxl-job, executor registry config fail, adminAddresses is null.");
             return;
         }
-
+        // 实例化注册线程
         registryThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -45,7 +53,12 @@ public class ExecutorRegistryThread {
                         RegistryParam registryParam = new RegistryParam(RegistryConfig.RegistType.EXECUTOR.name(), appname, address);
                         for (AdminBiz adminBiz: XxlJobExecutor.getAdminBizList()) {
                             try {
+                                /**
+                                 * 向server注册服务(http请求),注册内容appname,当前服务监听地址
+                                 * @see AdminBizClient#registry(com.xxl.job.core.biz.model.RegistryParam)
+                                 */
                                 ReturnT<String> registryResult = adminBiz.registry(registryParam);
+                                // 访问成功
                                 if (registryResult!=null && ReturnT.SUCCESS_CODE == registryResult.getCode()) {
                                     registryResult = ReturnT.SUCCESS;
                                     logger.debug(">>>>>>>>>>> xxl-job registry success, registryParam:{}, registryResult:{}", new Object[]{registryParam, registryResult});
@@ -67,6 +80,7 @@ public class ExecutorRegistryThread {
 
                     try {
                         if (!toStop) {
+                            // 心跳间隔时间30秒
                             TimeUnit.SECONDS.sleep(RegistryConfig.BEAT_TIMEOUT);
                         }
                     } catch (InterruptedException e) {
@@ -76,7 +90,7 @@ public class ExecutorRegistryThread {
                     }
                 }
 
-                // registry remove
+                // registry remove 删除注册
                 try {
                     RegistryParam registryParam = new RegistryParam(RegistryConfig.RegistType.EXECUTOR.name(), appname, address);
                     for (AdminBiz adminBiz: XxlJobExecutor.getAdminBizList()) {
@@ -108,6 +122,7 @@ public class ExecutorRegistryThread {
         });
         registryThread.setDaemon(true);
         registryThread.setName("xxl-job, executor ExecutorRegistryThread");
+        // 启动注册线程
         registryThread.start();
     }
 
